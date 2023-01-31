@@ -1,10 +1,11 @@
 using Dapper;
 using DependencyStore.Models;
+using DependencyStore.Repositories.Contracts;
 using Microsoft.Data.SqlClient;
 
 namespace DependencyStore.Repositories
 {
-    public class ClienteRepository
+    public class ClienteRepository : IClienteRepository
     {
         private readonly SqlConnection _connection;
 
@@ -13,7 +14,7 @@ namespace DependencyStore.Repositories
             _connection = connection;
         }
 
-        public async Task<Cliente?> ObterPorIdAsync(string clienteId)
+        public async Task<Cliente> ObterPorIdAsync(string clienteId)
         {
             const string query = "SELECT [Id], [Nome], [Email] FROM CLIENTE WHERE ID = @id";
             return await _connection.QueryFirstOrDefaultAsync<Cliente>(query, new

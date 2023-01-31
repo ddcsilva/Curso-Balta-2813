@@ -1,23 +1,31 @@
 ﻿using Dapper;
 using DependencyStore.Models;
+using DependencyStore.Repositories.Contracts;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using RestSharp;
 
 namespace DependencyStore.Controllers;
 
-public class OrderController : ControllerBase
+public class PedidoController : ControllerBase
 {
+    private readonly IClienteRepository _clienteRepository;
+
+    public PedidoController(IClienteRepository clienteRepository)
+    {
+        _clienteRepository = clienteRepository;
+    }
+
     [Route("v1/pedidos")]
     [HttpPost]
     public async Task<IActionResult> Local(string clienteId, string cep, string codigoPromocional, int[] produtos)
     {
         // #1 - Recupera o cliente
-        Cliente cliente = null;
-        await using (var conexao = new SqlConnection("CONN_STRING"))
+        Cliente cliente = await _clienteRepository.ObterPorIdAsync(clienteId);
+
+        if (cliente == null)
         {
-            const string query = "SELECT [Id], [Nome], [Email] FROM CLIENTE WHERE ID = @id";
-            cliente = await conexao.QueryFirstAsync<Cliente>(query, new { id = clienteId });
+            return NotFound();
         }
 
         // #2 - Calcula o frete
