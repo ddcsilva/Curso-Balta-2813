@@ -1,6 +1,7 @@
 ﻿using Dapper;
 using DependencyStore.Models;
 using DependencyStore.Repositories.Contracts;
+using DependencyStore.Services.Contracts;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using RestSharp;
@@ -10,10 +11,12 @@ namespace DependencyStore.Controllers;
 public class PedidoController : ControllerBase
 {
     private readonly IClienteRepository _clienteRepository;
+    private readonly ITaxaEntregaService _taxaEntregaService;
 
-    public PedidoController(IClienteRepository clienteRepository)
+    public PedidoController(IClienteRepository clienteRepository, ITaxaEntregaService taxaEntregaService)
     {
         _clienteRepository = clienteRepository;
+        _taxaEntregaService = taxaEntregaService;
     }
 
     [Route("v1/pedidos")]
@@ -21,24 +24,13 @@ public class PedidoController : ControllerBase
     public async Task<IActionResult> Local(string clienteId, string cep, string codigoPromocional, int[] produtos)
     {
         // #1 - Recupera o cliente
-        Cliente cliente = await _clienteRepository.ObterPorIdAsync(clienteId);
+        var cliente = await _clienteRepository.ObterPorIdAsync(clienteId);
 
         if (cliente == null)
-        {
             return NotFound();
-        }
 
         // #2 - Calcula o frete
-        decimal taxaEntrega = 0;
-        var client = new RestClient("https://consultafrete.io/cep/");
-        var request = new RestRequest().AddJsonBody(new { cep });
-        taxaEntrega = await client.PostAsync<decimal>(request, new CancellationToken());
-
-        // Nunca é menos que R$ 5,00
-        if (taxaEntrega < 5)
-        {
-            taxaEntrega = 5;
-        }
+        var taxaEntrega = await _taxaEntregaService.ObterTaxaEntregaAsync(cep);
 
         // #3 - Calcula o total dos produtos
         decimal subTotal = 0;
